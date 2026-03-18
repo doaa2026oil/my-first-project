@@ -4,3 +4,6 @@ pandas
 numpy
 matplotlib
 plotly
+Pyvista
+st-pyvista
+pillow
