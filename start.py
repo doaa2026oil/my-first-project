@@ -1,121 +1,151 @@
 import streamlit as st
-import matplotlib.pyplot as plt
-import numpy as np
+import base64
 
-# إعداد واجهة التطبيق بشكل احترافي وألوان داكنة
-st.set_page_config(page_title="AI Reservoir Vision", layout="wide", page_icon="🤖")
+# --- إعدادات الصفحة ---
+st.set_page_config(layout="wide", page_title="AI Reservoir Analysis - RoboUI")
 
-# --- إضافة CSS متقدم للصور والخلفية والجمالية العامة ---
-st.markdown("""
+# --- دمج صورة الخلفية (Coded in Base64) ---
+# ملاحظة: قم بتغيير 'image_1.png' ليكون هو المسار الفعلي لصورتك على جهازك.
+# إذا كانت الصورة في نفس مجلد ملف الـ Python، فقط اكتب اسمها.
+try:
+    with open("image_1.png", "rb") as image_file:
+        encoded_string = base64.b64encode(image_file.read()).decode()
+    
+    # كود CSS لتعيين الخلفية وتطبيق تأثير الشفافية (Glassmorphism) على البطاقات
+    background_and_cards_css = f"""
     <style>
-    /* خلفية التطبيق مع تأثير شبكة ذكاء اصطناعي (أنيقة وغير مشتتة) */
-    .stApp {
-        background-color: #050509;
-        background-image: radial-gradient(#1a1a2e 1px, transparent 1px);
-        background-size: 20px 20px;
-        color: #e0e0e0;
-    }
-    
-    /* تنسيق العناوين مع أيقونات */
-    .ai-title {
-        color: #00f2fe;
-        font-family: 'Courier New', Courier, monospace;
-        text-align: center;
-        border-bottom: 2px solid #4facfe;
-        padding-bottom: 10px;
+    /* 1. تعيين خلفية الصفحة بالكامل */
+    .stApp {{
+        background-image: url("data:image/png;base64,{encoded_string}");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+    }}
+
+    /* 2. جعل حاويات الـ st.container (البطاقات) شفافة وأنيقة */
+    div.stContainer {{
+        background-color: rgba(255, 255, 255, 0.4); /* خلفية بيضاء شفافة */
+        backdrop-filter: blur(10px); /* تأثير الضبابية خلف البطاقة */
+        -webkit-backdrop-filter: blur(10px);
+        padding: 20px;
+        border-radius: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         margin-bottom: 20px;
-    }
-    
-    /* تنسيق الخانات */
-    .stNumberInput label {
-        color: #4facfe !important;
+    }}
+
+    /* 3. تنسيق العناوين داخل البطاقات لتكون واضحة */
+    div.stContainer h4 {{
+        color: #1a5cad !important;
         font-weight: bold;
-    }
-    
-    /* تنسيق الزر - تأثير نيوني */
-    div.stButton > button:first-child {
-        background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
-        color: #050509;
-        border-radius: 20px;
-        width: 100%;
-        font-weight: bold;
-        font-size: 1.2em;
-        border: none;
-        box-shadow: 0 0 10px #4facfe;
-        transition: 0.3s;
-    }
-    div.stButton > button:first-child:hover {
-        box-shadow: 0 0 20px #00f2fe;
-        transform: scale(1.02);
-    }
-    
-    /* إضافة أيقونات الذكاء الاصطناعي للنتائج */
-    .result-icon {
-        font-size: 2em;
-        margin-right: 10px;
-        vertical-align: middle;
-    }
+        margin-bottom: 15px;
+        border-bottom: 2px solid rgba(26, 92, 173, 0.5);
+        padding-bottom: 5px;
+    }}
+
+    /* 4. تنسيق مربعات الإدخال لتندمج مع التصميم */
+    div.stNumberInput input {{
+        background-color: rgba(255, 255, 255, 0.8) !important;
+        border-radius: 8px !important;
+    }}
+
+    /* 5. تنسيق عنوان الصفحة الرئيسي */
+    h1.main-title {{
+        text-align: center;
+        color: white;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+        padding: 20px 0;
+    }}
     </style>
-    """, unsafe_allow_html=True)
+    """
+    st.markdown(background_and_cards_css, unsafe_allow_html=True)
 
-# --- الهيدر مع أيقونة الروبوت والعنوان ---
-st.markdown('<h1 class="ai-title">🤖 AI-Driven Reservoir Vision v1.0</h1>', unsafe_allow_html=True)
+except FileNotFoundError:
+    st.error("⚠️ لم يتم العثور على ملف الصورة باسم 'image_1.png'. تأكد من وجوده في نفس المجلد أو قم بتعديل المسار في الكود.")
+    st.stop() # إيقاف التنفيذ إذا لم يتم العثور على الصورة
 
-# إضافة صورة معبرة عن الذكاء الاصطناعي في قطاع الطاقة (اختياري، يمكن حذف السطرين القادمين)
-# st.image("https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=600", caption="الذكاء الاصطناعي يحلل باطن الأرض", width=600)
 
-st.markdown("### 🛠️ إدخال بيانات المكمن الأساسية")
+# --- عنوان التطبيق الرئيسي ---
+st.markdown("<h1 class='main-title'>🤖 منصة التحليل الذكي للمكامن النفطية</h1>", unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
 
-# تقسيم الشاشة لمدخلات مرتبة
-col1, col2, col3, col4 = st.columns(4)
 
-with col1:
-    porosity = st.number_input("💧 المسامية (%)", value=22.5)
-with col2:
-    permeability = st.number_input("🔀 النفاذية (mD)", value=180.0)
-with col3:
-    depth1 = st.number_input("⬆️ العمق العلوي (m)", value=2100.0)
-with col4:
-    depth2 = st.number_input("⬇️ العمق السفلي (m)", value=2500.0)
+# --- تنظيم المدخلات كبطاقات شفافة (الواجهة الرئيسية) ---
 
+# الصف الأول: البطاقات الأساسية (المسامية والنفاذية)
+col_p, col_k = st.columns(2, gap="large")
+
+with col_p:
+    with st.container():
+        # تصميم بطاقة "المسامية"
+        st.markdown("<h4>🔵 بطاقة المسامية (Porosity)</h4>", unsafe_allow_html=True)
+        # حقل الإدخال الفعلي
+        porosity = st.number_input(
+            "أدخل قيمة المسامية (%)", 
+            min_value=0.0, 
+            max_value=100.0, 
+            value=15.0,
+            step=0.1,
+            key="porosity_input",
+            help="نسبة الفراغات في الصخر"
+        )
+
+with col_k:
+    with st.container():
+        # تصميم بطاقة "النفاذية"
+        st.markdown("<h4>🟢 بطاقة النفاذية (Permeability)</h4>", unsafe_allow_html=True)
+        # حقل الإدخال الفعلي
+        permeability = st.number_input(
+            "أدخل قيمة النفاذية (mD)", 
+            min_value=0.0, 
+            value=150.0,
+            key="permeability_input",
+            help="قدرة الصخر على تمرير الموائع"
+        )
+
+
+# الصف الثاني: البطاقات الثانوية (العمق والضغط)
+col_d, col_pr = st.columns(2, gap="large")
+
+with col_d:
+    with st.container():
+        # تصميم بطاقة "العمق"
+        st.markdown("<h4>📏 بطاقة العمق (Depth)</h4>", unsafe_allow_html=True)
+        depth_m = st.number_input(
+            "أدخل عمق الطبقة (m)", 
+            value=2500,
+            key="depth_input"
+        )
+[3/18/2026 4:29 PM] دعاء عيسى غتر(A), 35: with col_pr:
+    with st.container():
+        # تصميم بطاقة "الضغط"
+        st.markdown("<h4>⛽ بطاقة الضغط (Pressure)</h4>", unsafe_allow_html=True)
+        pressure_psi = st.number_input(
+            "أدخل ضغط المكمن (psi)", 
+            value=4500,
+            key="pressure_input"
+        )
+
+# --- زر التشغيل في الأسفل ---
 st.markdown("---")
+submit_col1, submit_col2, submit_col3 = st.columns([1, 1, 1])
+with submit_col2:
+    submit_btn = st.button("🚀 تشغيل تحليل الذكاء الاصطناعي", use_container_width=True)
 
-if st.button("🚀 تشغيل خوارزمية التحليل العميق"):
-    # تأثير "جاري التحميل" بشكل ذكاء اصطناعي
-    with st.spinner("🧠 جاري استدعاء النموذج العصبي وتحليل التكوينات الجيولوجية..."):
-        # محاكاة وقت المعالجة
-        import time
-        time.sleep(1.5)
-    
-    st.markdown("### 📊 تقرير النتائج النهائي")
-    
-    # قسم النتائج بتنسيق أيقونات
-    st.info("💡 تم تحليل 4 متغيرات جيولوجية مقابل 15,000 بئر مرجعي.")
-    
-    col_res1, col_res2 = st.columns([1.2, 1])
-    
-    with col_res1:
-        # تنسيق النتيجة بأيقونات
-        st.markdown(f"""
-            <div style="background-color: #0a0a12; padding: 20px; border-radius: 15px; border: 1px solid #4facfe;">
-                <h3 style="color: #4facfe;">✨ تقييم المكمن:</h3>
-                <p style="color: #00ff00; font-size: 1.5em; font-weight: bold;">
-                    ✅ <span class="result-icon">🛢️</span> مكمن عالي الجودة (High Quality)
-                </p>
-                <hr style="border-color: #1a1a2e;">
-                <p style="font-size: 1.1em;">
-                    <span class="result-icon">🎯</span> دقـة الـتـنـبـؤ: <span style="color: #00f2fe; font-weight: bold;">96.8%</span>
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    with col_res2:
-        # رسم بئر حقيقي ملون (مع إخفاء الأجزاء البيضاء في الرسم)
-[3/18/2026 4:17 PM] دعاء عيسى غتر(A), 35: fig, ax = plt.subplots(figsize=(5, 8), facecolor='#050509')
-        
-        # رسم طبقات الأرض
-        ax.fill_between([0, 1], 0, 10, color='#2c2c2c') # صخور عامة
-        ax.fill_between([0, 1], 3, 7, color='#000000', alpha=0.9, hatch='//', edgecolor='#4facfe') # طبقة النفط المستهدفة
-        
-        # رسم أنبوب البئر
-        ax.plot([0.5, 0.5], [0, 10], color='#
+# --- قسم النتائج (افتراضي) ---
+if submit_btn:
+    st.markdown("---")
+    st.subheader("💡 نتائج التحليل الذكي:")
+    with st.container(): # وضع النتائج داخل بطاقة شفافة أيضاً
+        results_col1, results_col2 = st.columns(2)
+        with results_col1:
+            st.info("جاري تحليل البيانات باستخدام النماذج المتقدمة...")
+            # هنا ستضيف الكود الخاص بالتحليل
+        with results_col2:
+            # مثال لعرض قيمة نهائية بأسلوب Metric
+            final_score = (porosity * 0.4) + (permeability / 100 * 0.6) # معادلة بسيطة للمثال
+            st.metric(label="تقييم المكمن الإجمالي", value=f"{final_score:.1f}", delta="جيد جداً")
+else:
+    with st.container():
+        st.info("بانتظار إدخال البيانات والضغط على زر التشغيل...")
