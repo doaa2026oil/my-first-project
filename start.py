@@ -1,172 +1,77 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
 import plotly.graph_objects as go
-import base64
 
-# --- إعدادات الصفحة ---
-st.set_page_config(page_title="تحليل المكمن بالذكاء الاصطناعي", layout="wide")
+# --- ملاحظة: كود الخلفية الخاص بكِ (add_bg_from_local) يجب أن يبقى في بداية ملفكِ ---
 
-# --- وظيفة لإضافة الخلفية من ملفك background.png (اختياري، يمكنك إزالتها إذا أردت خلفية بيضاء) ---
-def add_bg_from_local(image_file):
-    try:
-        with open(image_file, "rb") as image_file:
-            encoded_string = base64.b64encode(image_file.read())
-        st.markdown(
-        f"""
-        <style>
-        .stApp {{
-            background-image: url(data:image/{"png"};base64,{encoded_string.decode()});
-            background-size: cover;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True
-        )
-    except FileNotFoundError:
-        pass # إذا لم توجد الخلفية، اتركها بيضاء
+st.markdown("<h1 style='text-align: center; color: #FFD700;'>🔥 لوحة تحكم الشعلات وتحليل المكمن 🔥</h1>", unsafe_allow_html=True)
 
-# استدعاء الخلفية (تأكد أن الاسم مطابق لملفك في GitHub)
-add_bg_from_local('background.png')
-
-# --- تنسيقات البطاقات الملونة (لتظهر بشكل احترافي) ---
-st.markdown("""
-<style>
-    .stMetric {
-        background-color: rgba(255, 255, 255, 0.95); /* خلفية بيضاء شبه معتمة */
-        padding: 20px;
-        border-radius: 15px;
-        border-left: 5px solid #ff4b4b; /* لون الحافة */
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
-    }
-    .stMetric label {
-        font-weight: bold;
-        color: #333;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-st.title("🛢️ تحليل المكمن بالذكاء الاصطناعي")
-st.markdown("---")
-
-# --- مدخلات البيانات في الشريط الجانبي (كما هي) ---
-st.sidebar.header("📥 إدخال قيم المكمن")
-st.sidebar.markdown("قم بتحريك المؤشرات لرؤية التغيير في المخطط.")
-porosity = st.sidebar.slider("المسامية (%)", 5.0, 40.0, 15.0, step=0.1)
-permeability = st.sidebar.slider("النفاذية (mD)", 10.0, 1000.0, 150.0, step=1.0)
-water_sat = st.sidebar.slider("تشبع الماء (%)", 10.0, 90.0, 30.0, step=0.1)
-thickness = st.sidebar.slider("السمك (ft)", 10.0, 500.0, 100.0, step=1.0)
-
-# --- حساب الإنتاج المتوقع (معادلة تجريبية) ---
-production = (porosity * permeability * (100 - water_sat) * thickness) / 10000
-
-# --- عرض البطاقات الأربعة الملونة ---
-st.subheader("📊 المؤشرات الرئيسية للمكمن")
+# ==========================================
+# 1. البطاقات الملونة (المدخلات)
+# ==========================================
 col1, col2, col3, col4 = st.columns(4)
+
 with col1:
-    st.metric("المسامية (Porosity)", f"{porosity}%")
+    st.markdown("<div style='background-color: rgba(233, 30, 99, 0.2); padding: 15px; border-radius: 10px; border: 2px solid #e91e63;'>", unsafe_allow_html=True)
+    porosity = st.number_input("💧 المسامية (%)", value=25.0)
+    st.markdown("</div>", unsafe_allow_html=True)
+
 with col2:
-    st.metric("النفاذية (Permeability)", f"{permeability}")
+    st.markdown("<div style='background-color: rgba(3, 169, 244, 0.2); padding: 15px; border-radius: 10px; border: 2px solid #03a9f4;'>", unsafe_allow_html=True)
+    permeability = st.number_input("🏎️ النفاذية (mD)", value=150)
+    st.markdown("</div>", unsafe_allow_html=True)
+
 with col3:
-    st.metric("تشبع الماء (Sw)", f"{water_sat}%")
+    st.markdown("<div style='background-color: rgba(76, 175, 80, 0.2); padding: 15px; border-radius: 10px; border: 2px solid #4caf50;'>", unsafe_allow_html=True)
+    pressure = st.number_input("🏋️ الضغط (psi)", value=3500)
+    st.markdown("</div>", unsafe_allow_html=True)
+
 with col4:
-    st.metric("الإنتاج المتوقع (Production)", f"{int(production)} bpd", delta=f"{int(production*0.05)} bpd (خطأ تقديري)")
-
-st.markdown("---")
+    st.markdown("<div style='background-color: rgba(255, 152, 0, 0.2); padding: 15px; border-radius: 10px; border: 2px solid #ff9800;'>", unsafe_allow_html=True)
+    depth = st.number_input("🕳️ العمق (ft)", value=7500)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # ==========================================
-# --- المخطط الهندي: رسم البرج والشعلات التفاعلية ---
+# 2. المخطط مع صورة البرج الفوتوغرافية
 # ==========================================
-
-st.subheader("🏗️ مخطط البرج والشعلات الهندسي (تفاعلي)")
-
-# إنشاء مخطط Plotly فارغ
 fig = go.Figure()
 
-# 1. رسم هيكل البرج هندسياً (باستخدام إحداثيات X, Y)
-# رسم القاعدة
-fig.add_trace(go.Scatter(
-    x=[0, 1, 1.5, 0.5, 0], 
-    y=[0, 0, 1, 1, 0], 
-    fill="toself", 
-    fillcolor='rgba(100, 100, 100, 0.5)', # لون رمادي شبه شفاف
-    line=dict(color='black', width=2),
-    name="القاعدة",
-    hoverinfo='skip'
-))
+# رابط صورة برج فوتوغرافية (يمكنكِ استبداله برابط صورتكِ الخاصة)
+img_url = "https://images.unsplash.com/photo-1516198116309-885448657062?q=80&w=1000&auto=format&fit=crop"
 
-# رسم البرج العمودي الرئيسي
-fig.add_trace(go.Scatter(
-    x=[0.4, 0.6, 0.6, 0.4, 0.4], 
-    y=[1, 1, 8, 8, 1], 
-    fill="toself", 
-    fillcolor='rgba(150, 150, 150, 0.7)', # لون رمادي أغمق
-    line=dict(color='black', width=2),
-    name="البرج الرئيسي",
-    hoverinfo='skip'
-))
-
-# رسم قمة البرج (حيث تخرج الشعلات)
-fig.add_trace(go.Scatter(
-    x=[0.35, 0.65, 0.65, 0.35, 0.35], 
-    y=[8, 8, 8.5, 8.5, 8], 
-    fill="toself", 
-    fillcolor='rgba(50, 50, 50, 0.9)', # لون قريب من الأسود
-    line=dict(color='black', width=2),
-    name="القمة",
-    hoverinfo='skip'
-))
-
-# 2. تحديد أماكن الشعلات الأربعة (X, Y) فوق قمة البرج المرسوم
-flame_x = [0.4, 0.47, 0.53, 0.6] # أماكن أفقية فوق القمة
-flame_y = [8.7, 8.7, 8.7, 8.7] # مكان عمودي واحد فوق القمة
-# 3. إضافة الشعلات الأربعة التفاعلية (كأنها نقاط على المخطط)
-# شعلة المسامية (أحمر)، النفاذية (برتقالي)، تشبع (أصفر)، سمك (ذهبي)
-# حجم الشعلة (Size) يعتمد مباشرة على القيمة المدخلة
-flame_values = [porosity * 2, permeability / 10, water_sat * 1.5, thickness / 3]
-flame_colors = ['#e74c3c', '#e67e22', '#f1c40f', '#d35400']
-flame_labels = ['مسامية', 'نفاذية', 'تشبع الماء', 'سمك المكمن']
-
-for i in range(4):
-    # إضافة الشعلة الرئيسية (القلب)
-    fig.add_trace(go.Scatter(
-        x=[flame_x[i]], 
-        y=[flame_y[i]],
-        mode='markers',
-        marker=dict(
-            size=flame_values[i], # حجم متغير!
-            color=flame_colors[i],
-            symbol='diamond', # شكل يشبه الشعلة
-            opacity=0.9,
-            line=dict(color='white', width=1)
-        ),
-        name=flame_labels[i],
-        text=f"{flame_labels[i]}: {int(flame_values[i])}",
-        hoverinfo='text'
-    ))
-    
-    # إضافة تأثير الوهج حول الشعلة
-    fig.add_trace(go.Scatter(
-        x=[flame_x[i]], 
-        y=[flame_y[i]],
-        mode='markers',
-        marker=dict(size=flame_values[i] * 1.6, color=flame_colors[i], opacity=0.3, hoverinfo='skip'),
-        showlegend=False
-    ))
-
-# تحسين مظهر المخطط العام وإخفاء المحاور
-fig.update_layout(
-    height=700, # زيادة الارتفاع ليتناسب مع البرج العمودي
-    margin=dict(l=10, r=10, t=10, b=10),
-    xaxis=dict(visible=False, range=[-0.5, 2]), # إخفاء المحور X وتحديد النطاق
-    yaxis=dict(visible=False, range=[-0.5, 10]), # إخفاء المحور Y وتحديد النطاق
-    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+# إضافة الصورة كخلفية للمخطط فقط
+fig.add_layout_image(
+    dict(
+        source=img_url,
+        xref="x", yref="y",
+        x=0, y=1,
+        sizex=1, sizey=1,
+        sizing="stretch",
+        layer="below"
+    )
 )
 
-# عرض المخطط التفاعلي في Streamlit
-st.plotly_chart(fig, use_container_width=True)
+# رسم الشعلات (الأعمدة) فوق صورة البرج
+flame_values = [porosity, permeability/50, pressure/100, depth/200] # تسوية القيم للرسم
+flame_colors = ['#e91e63', '#03a9f4', '#4caf50', '#ff9800']
+x_pos = [0.2, 0.4, 0.6, 0.8] # مواقع الشعلات فوق البرج
 
-# تذييل الصفحة
-st.markdown("---")
-st.caption("تطوير: فريق هندسة المكامن الرقمية | هذا النموذج يستخدم معادلات محاكاة لأغراض العرض فقط.")
+fig.add_trace(go.Bar(
+    x=x_pos,
+    y=flame_values,
+    marker_color=flame_colors,
+    width=0.08,
+    text=[f"{porosity}%", f"{permeability}", f"{pressure}", f"{depth}"],
+    textposition='outside',
+    textfont=dict(color='white', size=16)
+))
+
+fig.update_layout(
+    xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[0, 1]),
+    yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[0, 1.2]),
+    paper_bgcolor='rgba(0,0,0,0)', # خلفية المخطط شفافة لتظهر خلفية تطبيقكِ
+    plot_bgcolor='rgba(0,0,0,0)',
+    margin=dict(l=0, r=0, t=50, b=0),
+    height=600
+)
+
+st.plotly_chart(fig, use_container_width=True)
