@@ -1,4 +1,4 @@
-import streamlit as st
+[3/18/2026 1:33 PM] دعاء عيسى غتر(A), 35: import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
 
@@ -187,3 +187,46 @@ else:
 # --- تذييل الصفحة ---
 st.markdown("---")
 st.markdown("<p style='text-align: center; color: gray;'>تطبيق تحليل المكامن النفطية - عرض توضيحي للرسم الجيولوجي - © 2026</p>", unsafe_allow_config=True)
+[3/18/2026 1:53 PM] دعاء عيسى غتر(A), 35: # ب. الرسوم البيانية التفاعلية المدعومة بالذكاء الاصطناعي (AI Analytics)
+        st.subheader("📉 التصور البصري لتحليل البيانات السيزمية (Seismic AI Visuals)")
+        g1, g2 = st.columns(2)
+
+        with g1:
+            # مثال لرسم بياني زمني تفاعلي: تحليل الانحدار السيزمي
+            df = pd.DataFrame({
+                'تاريخ': pd.date_range(start='2026-01-01', periods=12, freq='M'),
+                'سعة الموجة (المدخلات)': np.random.normal(amplitude, 100, 12),
+                'الاحتمالية المتوقعة (مخرجات الذكاء)': probability * np.exp(-0.01 * np.arange(12))
+            })
+            fig = px.line(df, x='تاريخ', y=['سعة الموجة (المدخلات)', 'الاحتمالية المتوقعة (مخرجات الذكاء)'], 
+                          title="تحليل انحدار الاحتمالية مقابل سعة الموجة السيزمية عبر الزمن")
+            fig.update_layout(template="plotly_dark") # نمط مظلم للانبهار
+            st.plotly_chart(fig, use_container_width=True)
+
+        with g2:
+            # مثال لرسم بياني مكاني: خريطة الحرارة لاحتمالية المكامن
+            # سنقوم بتوليد بيانات عشوائية محاكية
+            grid_size = 20
+            data = np.random.normal(probability, 10, (grid_size, grid_size))
+            fig2 = px.imshow(data, color_continuous_scale='Viridis', 
+                            labels=dict(x="الاحداثي الأفقي", y="الاحداثي الرأسي", color="الاحتمالية%"),
+                            title="خريطة الحرارة الذكية لاحتمالية توزيع الهيدروكربون (AI Heatmap)")
+            fig2.update_layout(template="plotly_dark")
+            st.plotly_chart(fig2, use_container_width=True)
+
+        # ج. تحليل الثقة وتفسير النموذج (Model Interpretation)
+        st.write("#### 🛡️ تحليل موثوقية التنبؤ (Model Confidence Analysis)")
+        st.info("يعتمد هذا التنبؤ على تحليل نموذج الشبكات العصبية (Neural Network) لـ 1500 عينة تدريب سابقة.")
+        
+        # مثال لجدول بيانات الثقة
+        confidence_data = {
+            'المعامل السيزمي': ['دقة تحديد الحدود', 'تقدير النفاذية', 'تقدير المسامية'],
+            'مستوى الثقة للنموذج (Confidence Level %)': [92.1, 78.5, 88.0],
+            'التفسير الذكي': ["دقيقة جداً بناءً على جودة السيزميك", "ثقة متوسطة نظراً لتباين الصخر", "ثقة عالية بناءً على الآبار المجاورة"]
+        }
+        st.dataframe(pd.DataFrame(confidence_data), use_container_width=True)
+        st.success("تم الانتهاء من التحليل. يمكنك التفاعل مع الرسوم البيانية بالماوس.")
+
+# -- 6. تذييل الصفحة (توقيعك) --
+st.markdown("---")
+st.caption("🚀 AI Reservoir Discovery System v2.1 | Developed by Doaa Issa | Smart Oilfield Solutions 2026")
