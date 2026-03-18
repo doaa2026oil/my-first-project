@@ -1,4 +1,4 @@
-[3/18/2026 2:32 PM] دعاء عيسى غتر(A), 35: import streamlit as st
+import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
