@@ -1,244 +1,172 @@
 import streamlit as st
-from PIL import Image
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
 import base64
 
-# --- الإعدادات العامة للصفحة ---
-st.set_page_config(layout="wide", page_title="AI Reservoir Analysis Dashboard")
+# --- إعدادات الصفحة ---
+st.set_page_config(page_title="تحليل المكمن بالذكاء الاصطناعي", layout="wide")
 
-# --- دالة مساعدة لتحويل الصورة إلى Base64 لاستخدامها في CSS ---
-def get_base64_of_bin_file(bin_file):
-    with open(bin_file, 'rb') as f:
-        data = f.read()
-    return base64.b64encode(data).decode()
+# --- وظيفة لإضافة الخلفية من ملفك background.png (اختياري، يمكنك إزالتها إذا أردت خلفية بيضاء) ---
+def add_bg_from_local(image_file):
+    try:
+        with open(image_file, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read())
+        st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url(data:image/{"png"};base64,{encoded_string.decode()});
+            background-size: cover;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+        )
+    except FileNotFoundError:
+        pass # إذا لم توجد الخلفية، اتركها بيضاء
 
-# --- إعداد الخلفية (باستخدام صورة الروبوت المقدمة) ---
-# ملاحظة: تأكد من تسمية ملف صورة الروبوت بـ 'background.png' في نفس المجلد
-try:
-    bin_str = get_base64_of_bin_file('background.png')
-    page_bg_img = f'''
-    <style>
-    .stApp {{
-        background-image: url("data:image/png;base64,{bin_str}");
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-    }}
-    /* تعديل شفافية محتوى الصفحة الرئيسية ليظهر الخلفية */
-    .block-container {{
-        background-color: rgba(255, 255, 255, 0.7);
+# استدعاء الخلفية (تأكد أن الاسم مطابق لملفك في GitHub)
+add_bg_from_local('background.png')
+
+# --- تنسيقات البطاقات الملونة (لتظهر بشكل احترافي) ---
+st.markdown("""
+<style>
+    .stMetric {
+        background-color: rgba(255, 255, 255, 0.95); /* خلفية بيضاء شبه معتمة */
+        padding: 20px;
         border-radius: 15px;
-        padding: 2rem;
-        margin-top: 2rem;
-    }}
-    </style>
-    '''
-    st.markdown(page_bg_img, unsafe_allow_html=True)
-except FileNotFoundError:
-    st.error("لم يتم العثور على ملف الخلفية 'background.png'. يرجى التأكد من وجوده في نفس المجلد.")
-
-# --- تعريف التنسيقات (CSS) المخصصة للبطاقات والمحتوى ---
-st.markdown("""
-<style>
-/* تنسيق البطاقة الرئيسية (العلبة) */
-.card-container {
-    background-color: #f1f6f9;
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    margin-bottom: 1rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-}
-
-/* تنسيق الأيقونة داخل البطاقة */
-.card-icon {
-    font-size: 3rem;
-    color: #4a90e2; /* لون أيقونة أزرق */
-    margin-bottom: 0.5rem;
-}
-
-/* تنسيق اسم المتغير */
-.card-title {
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    color: #333;
-    font-weight: bold;
-    letter-spacing: 1px;
-    margin-bottom: 0.2rem;
-}
-
-/* تنسيق القيمة الكبيرة */
-.card-value {
-    font-size: 2rem;
-    font-weight: bold;
-    color: #1a1a1a;
-    margin-bottom: -0.2rem;
-}
-
-/* تنسيق الوحدة */
-.card-unit {
-    font-size: 0.8rem;
-    color: #777;
-    margin-bottom: 1rem;
-}
-
-/* تنسيق الرسم البياني المصغر (الشكل العام) */
-.card-sparkline {
-    width: 100%;
-    height: 30px;
-    border-radius: 5px;
-    background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%); /* خلفية متدرجة بسيطة للشرارة */
-}
-
-/* تنسيق علامات التحقق */
-.data-status {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    font-size: 0.8rem;
-    color: #2e7d32; /* لون أخضر للتحقق */
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-/* تنسيق حاوية الصورة في الأسفل */
-.diagram-container {
-    position: relative;
-    width: 100%;
-    margin-top: 2rem;
-}
-
-/* تنسيق البطاقات العائمة فوق الصورة */
-.floating-card {
-    position: absolute;
-    background-color: white;
-    padding: 8px 15px;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-    font-size: 0.85rem;
-    font-weight: bold;
-    color: #333;
-    border: 1px solid #ddd;
-}
-
+        border-left: 5px solid #ff4b4b; /* لون الحافة */
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    .stMetric label {
+        font-weight: bold;
+        color: #333;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# --- محتوى الصفحة ---
-
-# عنوان الصفحة
-st.title("ARTIFICIAL INTELLIGENCE IN RESERVOIR ANALYSIS")
-st.markdown("<p style='font-size: 1.1rem; color: #555;'>Project Dashboard - Core AI Core Project</p>", unsafe_allow_html=True)
+st.title("🛢️ تحليل المكمن بالذكاء الاصطناعي")
 st.markdown("---")
 
-# --- القسم العلوي: نظرة عامة على معلمات المكمن (البطاقات) ---
-st.markdown("### RESERVOIR PARAMETER OVERVIEW")
+# --- مدخلات البيانات في الشريط الجانبي (كما هي) ---
+st.sidebar.header("📥 إدخال قيم المكمن")
+st.sidebar.markdown("قم بتحريك المؤشرات لرؤية التغيير في المخطط.")
+porosity = st.sidebar.slider("المسامية (%)", 5.0, 40.0, 15.0, step=0.1)
+permeability = st.sidebar.slider("النفاذية (mD)", 10.0, 1000.0, 150.0, step=1.0)
+water_sat = st.sidebar.slider("تشبع الماء (%)", 10.0, 90.0, 30.0, step=0.1)
+thickness = st.sidebar.slider("السمك (ft)", 10.0, 500.0, 100.0, step=1.0)
 
-# إنشاء أعمدة للبطاقات
+# --- حساب الإنتاج المتوقع (معادلة تجريبية) ---
+production = (porosity * permeability * (100 - water_sat) * thickness) / 10000
+
+# --- عرض البطاقات الأربعة الملونة ---
+st.subheader("📊 المؤشرات الرئيسية للمكمن")
 col1, col2, col3, col4 = st.columns(4)
-
-# القيم الافتراضية
-porosity_val = 18.5
-permeability_val = 125.7
-depth_val = 2450
-pressure_val = 3150
-
-# دالة مساعدة لإنشاء البطاقات لتجنب التكرار
-def create_card(column, icon, title, value, unit, status_text):
-    with column:
-        st.markdown(f'''
-        <div class="card-container">
-            <div class="data-status"><span>{status_text}</span> <span style="font-size: 1.1rem;">✅</span></div>
-[3/18/2026 4:54 PM] دعاء عيسى غتر(A), 35: <div class="card-icon">{icon}</div>
-            <div class="card-title">{title}</div>
-            <div class="card-value">{value}</div>
-            <div class="card-unit">{unit}</div>
-            <div class="card-sparkline"></div>
-        </div>
-        ''', unsafe_allow_html=True)
-
-# ملء البطاقات
-create_card(col1, "⚪", "POROSITY", f"{porosity_val}%", "Units: Ø", "Data integrity")
-create_card(col2, "≋", "PERMEABILITY", f"{permeability_val} mD", "Units: mD", "Data Integrity")
-create_card(col3, "📏", "DEPTH", f"{depth_val:,} m", "Units: meters", "Data Integrity")
-create_card(col4, "⏲️", "PRESSURE", f"{pressure_val:,} psi", "Units: psi", "Data integrity")
+with col1:
+    st.metric("المسامية (Porosity)", f"{porosity}%")
+with col2:
+    st.metric("النفاذية (Permeability)", f"{permeability}")
+with col3:
+    st.metric("تشبع الماء (Sw)", f"{water_sat}%")
+with col4:
+    st.metric("الإنتاج المتوقع (Production)", f"{int(production)} bpd", delta=f"{int(production*0.05)} bpd (خطأ تقديري)")
 
 st.markdown("---")
 
-# --- القسم السفلي: مخطط برج الحفر (الرسم التفصيلي) ---
-st.markdown("### WELLBORE DIAGRAM")
+# ==========================================
+# --- المخطط الهندي: رسم البرج والشعلات التفاعلية ---
+# ==========================================
 
-# عرض الصورة
-# ملاحظة: تأكد من تسمية ملف مخطط البرج بـ 'derrick_diagram.png' في نفس المجلد
-try:
-    diag_img_str = get_base64_of_bin_file('derrick_diagram.png')
-    
-    # تنسيق البطاقات العائمة فوق الصورة بدقة
-    # تم تحديد المواقع بدقة تقريبية لتطابق التصميم المقدم
-    st.markdown(f'''
-    <div class="diagram-container">
-        <img src="data:image/png;base64,{diag_img_str}" style="width: 100%; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        
-        <div class="floating-card" style="top: 25%; left: 7%;">
-            <span style="font-weight: bold;">Porosity</span><br>
-            <span style="font-size: 1.1rem;">Ø: {porosity_val}%</span>
-        </div>
-        
-        <div class="floating-card" style="bottom: 10%; left: 20%;">
-            <span style="font-weight: bold;">Permeability</span><br>
-            <span style="font-size: 1.1rem;">k: {permeability_val} mD</span>
-        </div>
-        
-        <div class="floating-card" style="top: 25%; right: 7%;">
-            <span style="font-weight: bold;">Depth</span><br>
-            <span style="font-size: 1.1rem;">D: {depth_val:,} m</span>
-        </div>
-        
-        <div class="floating-card" style="bottom: 10%; right: 20%;">
-            <span style="font-weight: bold;">Pressure</span><br>
-            <span style="font-size: 1.1rem;">P: {pressure_val:,} psi</span>
-        </div>
-    </div>
-    ''', unsafe_allow_html=True)
-except FileNotFoundError:
-    st.error("لم يتم العثور على ملف مخطط البرج 'derrick_diagram.png'. يرجى التأكد من وجوده في نفس المجلد.")
+st.subheader("🏗️ مخطط البرج والشعلات الهندسي (تفاعلي)")
 
+# إنشاء مخطط Plotly فارغ
+fig = go.Figure()
 
-# --- شريط الأدوات الجانبي ---
-with st.sidebar:
-    st.image('derrick_diagram.png', width=100) # إضافة لوغو صغير
-    st.markdown("## Configuration")
-    
-    st.markdown("### Input value")
-    input_val = st.selectbox("تسود النازية", ["18.5%", "15.0%", "20.0%", "22.5%"])
-    
-    st.markdown("### Units")
-    st.text_input("المجان الجريبية", "2257")
-    
-    st.markdown("### Simulation")
-    sim_type = st.selectbox("معرف الالتماسات", ["Run AI Analysis", "Run Standard Analysis"])
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("RUN AI ANALYSIS", type="primary"):
-        st.success(f"Starting {sim_type} on input {input_val}...")
-        # هنا يمكنك إضافة كود تشغيل نموذج الذكاء الاصطناعي الخاص بك
+# 1. رسم هيكل البرج هندسياً (باستخدام إحداثيات X, Y)
+# رسم القاعدة
+fig.add_trace(go.Scatter(
+    x=[0, 1, 1.5, 0.5, 0], 
+    y=[0, 0, 1, 1, 0], 
+    fill="toself", 
+    fillcolor='rgba(100, 100, 100, 0.5)', # لون رمادي شبه شفاف
+    line=dict(color='black', width=2),
+    name="القاعدة",
+    hoverinfo='skip'
+))
 
-    st.markdown("---")
-    st.markdown("Dashboard by: Core AI Core Project")
+# رسم البرج العمودي الرئيسي
+fig.add_trace(go.Scatter(
+    x=[0.4, 0.6, 0.6, 0.4, 0.4], 
+    y=[1, 1, 8, 8, 1], 
+    fill="toself", 
+    fillcolor='rgba(150, 150, 150, 0.7)', # لون رمادي أغمق
+    line=dict(color='black', width=2),
+    name="البرج الرئيسي",
+    hoverinfo='skip'
+))
 
-# تخصيص لغة واجهة Streamlit الجانبية إلى العربية
-st.markdown("""
-<style>
-/* تخصيص لغة واجهة Streamlit الجانبية */
-.stSidebar [data-testid="stSidebarNav"] {
-    direction: rtl;
-    text-align: right;
-}
-.stSidebar h2, .stSidebar h3, .stSidebar p {
-    text-align: right;
-}
-</style>
-""", unsafe_allow_html=True)
+# رسم قمة البرج (حيث تخرج الشعلات)
+fig.add_trace(go.Scatter(
+    x=[0.35, 0.65, 0.65, 0.35, 0.35], 
+    y=[8, 8, 8.5, 8.5, 8], 
+    fill="toself", 
+    fillcolor='rgba(50, 50, 50, 0.9)', # لون قريب من الأسود
+    line=dict(color='black', width=2),
+    name="القمة",
+    hoverinfo='skip'
+))
+
+# 2. تحديد أماكن الشعلات الأربعة (X, Y) فوق قمة البرج المرسوم
+flame_x = [0.4, 0.47, 0.53, 0.6] # أماكن أفقية فوق القمة
+flame_y = [8.7, 8.7, 8.7, 8.7] # مكان عمودي واحد فوق القمة
+# 3. إضافة الشعلات الأربعة التفاعلية (كأنها نقاط على المخطط)
+# شعلة المسامية (أحمر)، النفاذية (برتقالي)، تشبع (أصفر)، سمك (ذهبي)
+# حجم الشعلة (Size) يعتمد مباشرة على القيمة المدخلة
+flame_values = [porosity * 2, permeability / 10, water_sat * 1.5, thickness / 3]
+flame_colors = ['#e74c3c', '#e67e22', '#f1c40f', '#d35400']
+flame_labels = ['مسامية', 'نفاذية', 'تشبع الماء', 'سمك المكمن']
+
+for i in range(4):
+    # إضافة الشعلة الرئيسية (القلب)
+    fig.add_trace(go.Scatter(
+        x=[flame_x[i]], 
+        y=[flame_y[i]],
+        mode='markers',
+        marker=dict(
+            size=flame_values[i], # حجم متغير!
+            color=flame_colors[i],
+            symbol='diamond', # شكل يشبه الشعلة
+            opacity=0.9,
+            line=dict(color='white', width=1)
+        ),
+        name=flame_labels[i],
+        text=f"{flame_labels[i]}: {int(flame_values[i])}",
+        hoverinfo='text'
+    ))
+    
+    # إضافة تأثير الوهج حول الشعلة
+    fig.add_trace(go.Scatter(
+        x=[flame_x[i]], 
+        y=[flame_y[i]],
+        mode='markers',
+        marker=dict(size=flame_values[i] * 1.6, color=flame_colors[i], opacity=0.3, hoverinfo='skip'),
+        showlegend=False
+    ))
+
+# تحسين مظهر المخطط العام وإخفاء المحاور
+fig.update_layout(
+    height=700, # زيادة الارتفاع ليتناسب مع البرج العمودي
+    margin=dict(l=10, r=10, t=10, b=10),
+    xaxis=dict(visible=False, range=[-0.5, 2]), # إخفاء المحور X وتحديد النطاق
+    yaxis=dict(visible=False, range=[-0.5, 10]), # إخفاء المحور Y وتحديد النطاق
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+)
+
+# عرض المخطط التفاعلي في Streamlit
+st.plotly_chart(fig, use_container_width=True)
+
+# تذييل الصفحة
+st.markdown("---")
+st.caption("تطوير: فريق هندسة المكامن الرقمية | هذا النموذج يستخدم معادلات محاكاة لأغراض العرض فقط.")
