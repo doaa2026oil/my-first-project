@@ -1,86 +1,83 @@
 import streamlit as st
-import base64
+import plotly.graph_objects as go
+import numpy as np
 
-# 1. إعدادات المتصفح والخلفية الثابتة
+# --- 1. إعدادات الصفحة الاحترافية ---
+# نجعلها Wide لتوفير مساحة للعب بالمخطط
 st.set_page_config(page_title="تحليل المكامن - البرج الذكي", layout="wide")
 
-def set_bg():
-    try:
-        with open("background.png", "rb") as f:
-            data = base64.b64encode(f.read()).decode()
-        st.markdown(f"""
-            <style>
-            .stApp {{
-                background: url(data:image/png;base64,{data});
-                background-size: cover;
-                background-attachment: fixed;
-            }}
-            </style>
-            """, unsafe_allow_html=True)
-    except: pass
+# --- 2. تصميم الرأس (Header) ---
+st.markdown("<h1 style='text-align: center; color: #E63946; font-family: Cairo;'>نظام تحليل المكامن والإنتاج الذكي</h1>", unsafe_allow_html=True)
+st.write("---")
 
-set_bg()
-
-# 2. الواجهة الرئيسية (نفس ترتيبك المفضل)
-st.title("🏗️ نظام تحليل المكامن التفاعلي")
-
-col_input, col_rig = st.columns([1, 1.5])
-
-with col_input:
-    st.subheader("📝 إدخال البيانات")
-    depth = st.number_input("📏 العمق (ft)", value=8000)
-    pressure = st.number_input("🏋️ الضغط (psi)", value=3500)
-    porosity = st.number_input("💧 المسامية (%)", value=25.0)
-    permeability = st.number_input("🏎️ النفاذية (mD)", value=150)
+# --- 3. إدارة حالة المخطط (State Management) ---
+# هذه الخطوة مهمة جداً لضمان عدم إعادة رسم المخطط من الصفر
+if 'tower_fig' not in st.session_state:
+    # إنشاء المخطط مرة واحدة فقط وحفظه في الـ Session State
     
-    if st.button("🚀 تشغيل البرج والتحليل"):
-        show_analysis = True
-    else:
-        show_analysis = False
+    # تعريف إحداثيات هيكل البرج
+    tower_x = [1, 1.5, 2, 1]
+    tower_y = [0, 12, 0, 0]
+    
+    # تعريف إحداثيات الشعلات الأربع الثابتة
+    flare_locs = [ (1.3, 10), (1.5, 12), (1.7, 10), (1.5, 14) ]
+    
+    fig = go.Figure()
 
-# 3. البرج التفاعلي (الاحترافي)
-with col_rig:
-    if show_analysis:
-        # حسابات ارتفاع الشعلات بناءً على القيم
-        h1 = min(pressure/60, 100)
-        h2 = min(porosity*3, 100)
-        h3 = min(permeability/2, 100)
-        h4 = 60 # العمق شعلة مستقرة
+    # أ. هيكل البرج
+    fig.add_trace(go.Scatter(
+        x=tower_x, y=tower_y, 
+        fill='toself', 
+        line_color='#4A4A4A', 
+        name='هيكل البرج'
+    ))
 
-        rig_design = f"""
-        <div style="background: rgba(0,0,0,0.6); border: 2px solid #ce93d8; border-radius: 20px; padding: 25px; text-align: center;">
-            <h2 style="color: #e1bee7;">المخطط النهائي: برج الإنتاج</h2>
-            <div style="display: flex; justify-content: space-around; align-items: flex-end; height: 350px; border-bottom: 4px solid #fff; margin: 20px 0;">
-                
-                <div style="text-align: center;">
-                    <div style="height: {h1}px; width: 40px; background: linear-gradient(#ff5252, #ffb74d); border-radius: 50% 50% 0 0; animation: pulse 1s infinite alternate;"></div>
-                    <p style="color: white; font-weight: bold;">الضغط</p>
-                </div>
+    # ب. الشعلات الأربع (تستخدم Markers تفاعلية)
+    fig.add_trace(go.Scatter(
+        x=[loc[0] for loc in flare_locs],
+        y=[loc[1] for loc in flare_locs],
+        mode='markers',
+        marker=dict(size=30, color='#F4A261', symbol='hexagram-open-dot'),
+        name='الشعلات (تفاعلية)'
+    ))
 
-                <div style="text-align: center;">
-                    <div style="height: {h2}px; width: 40px; background: linear-gradient(#42a5f5, #e3f2fd); border-radius: 50% 50% 0 0; animation: pulse 1.2s infinite alternate;"></div>
-                    <p style="color: white; font-weight: bold;">المسامية</p>
-                </div>
+    # ج. تحسين التخطيط للتفاعل (Interaction Layout)
+    fig.update_layout(
+        plot_bgcolor='rgba(15,15,15,0.9)', # خلفية داكنة للتباين
+        paper_bgcolor='rgba(0,0,0,0)',
+        height=650, # تكبير المخطط للعب به
+        showlegend=True,
+        # جعل المحاور مرئية ولكن خفيفة للعب بـ Zoom و Pan
+        xaxis=dict(showgrid=False, zeroline=False, range=[0, 3]),
+        yaxis=dict(showgrid=True, zeroline=False, range=[-2, 18], gridcolor='rgba(255,255,255,0.1)'),
+        # تمكين شريط الأدوات الكامل للتفاعل (Zoom, Pan, Box Select, etc.)
+        dragmode='pan', # الوضع الافتراضي هو التحريك (Pan)
+        hovermode='closest'
+    )
+    
+    st.session_state.tower_fig = fig
 
-                <div style="text-align: center;">
-                    <div style="height: {h3}px; width: 40px; background: linear-gradient(#66bb6a, #c8e6c9); border-radius: 50% 50% 0 0; animation: pulse 0.8s infinite alternate;"></div>
-                    <p style="color: white; font-weight: bold;">النفاذية</p>
-                </div>
+# --- 4. تقسيم الشاشة لمدخلات ومخطط تفاعلي ---
+col1, col2 = st.columns([1, 2.5]) # مساحة أكبر للمخطط
 
-                <div style="text-align: center;">
-                    <div style="height: {h4}px; width: 40px; background: linear-gradient(#ab47bc, #f3e5f5); border-radius: 50% 50% 0 0; animation: pulse 1.5s infinite alternate;"></div>
-                    <p style="color: white; font-weight: bold;">العمق</p>
-                </div>
-            </div>
+with col1:
+    st.markdown("<h3 style='font-family: Cairo;'>📋 إدخال البيانات الفنية</h3>", unsafe_allow_html=True)
+    # عند تغيير هذه المدخلات، ستعاد تحميل هذه القائمة فقط، ولن يتأثر المخطط
+    depth = st.number_input("العمق (ft)", value=8000, step=100)
+    pressure = st.number_input("الضغط (psi)", value=3500, step=50)
+    porosity = st.slider("المسامية (%)", 0, 100, 25)
+    flow_rate = st.number_input("معدل التدفق (bbl/d)", value=1500)
 
-            <style>
-                @keyframes pulse {{ from {{ transform: scaleY(1); opacity: 0.8; }} to {{ transform: scaleY(1.3); opacity: 1; }} }}
-            </style>
+with col2:
+    st.markdown("<h3 style='text-align: center; font-family: Cairo;'>🏗️ مخطط البرج والشعلات (التفاعل الكامل مفعل)</h3>", unsafe_allow_html=True)
+    
+    # عرض المخطط المحفوظ من الـ Session State
+    # هذا السطر يجعل المخطط مستقراً وتفاعلياً
+    st.plotly_chart(st.session_state.tower_fig, use_container_width=True)
 
-            <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; color: white; text-align: right;">
-                <b>🔍 تحليل القيم:</b> بناءً على المدخلات، المكمن عند عمق {depth} قدم يمتلك خصائص تدفق جيدة جداً، 
-                والشعلات المرتفعة تشير إلى إمكانية إنتاج مستدامة بفضل الضغط ({pressure} psi).
-            </div>
-        </div>
-        """
-        st.markdown(rig_design, unsafe_allow_html=True)
+# --- 5. عرض النتائج النهائية (بطاقات احترافية) ---
+st.write("---")
+res1, res2, res3 = st.columns(3)
+res1.metric(label="معدل التدفق", value=f"{flow_rate} bbl/d", delta="+5%")
+res2.metric(label="كفاءة المكمن", value=f"{porosity}%", delta="-2%")
+res3.metric(label="درجة الحرارة المتوقعة", value="210°F")
