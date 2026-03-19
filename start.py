@@ -1,204 +1,86 @@
 import streamlit as st
 import base64
 
-# --- 1. إعدادات الصفحة والخلفية ---
-st.set_page_config(page_title="برج تحليل المكامن الذكي", layout="wide")
+# 1. إعدادات المتصفح والخلفية الثابتة
+st.set_page_config(page_title="تحليل المكامن - البرج الذكي", layout="wide")
 
-# دالة لوضع صورة الخلفية (تأكدي من وجود ملف background.png)
-def set_bg_hack(main_bg):
+def set_bg():
     try:
-        main_bg_ext = "png"
-        st.markdown(
-            f"""
+        with open("background.png", "rb") as f:
+            data = base64.b64encode(f.read()).decode()
+        st.markdown(f"""
             <style>
             .stApp {{
-                background: url(data:image/{main_bg_ext};base64,{base64.b64encode(open(main_bg, "rb").read()).decode()});
+                background: url(data:image/png;base64,{data});
                 background-size: cover;
-                background-position: center;
-                background-repeat: no-repeat;
                 background-attachment: fixed;
             }}
-            # /* تخصيص الألوان لتباين أفضل مع الخلفية الغامقة */
-            # .stNumberInput label, .stSubheader div {{ color: #FFFFFF !important; }}
-            # </style>
-            """,
-            unsafe_allow_html=True
-        )
-    except FileNotFoundError:
-        st.warning("لم يتم العثور على ملف 'background.png'. سيتم استخدام الخلفية الافتراضية.")
+            </style>
+            """, unsafe_allow_html=True)
+    except: pass
 
-set_bg_hack('background.png')
+set_bg()
 
-# --- 2. واجهة الإدخال (بقيت كما هي) ---
-st.title("🔥 برج تحليل المكامن بالذكاء الاصطناعي")
+# 2. الواجهة الرئيسية (نفس ترتيبك المفضل)
+st.title("🏗️ نظام تحليل المكامن التفاعلي")
 
-col1, col2 = st.columns([1, 2]) # تقسيم الشاشة لعمودين
+col_input, col_rig = st.columns([1, 1.5])
 
-with col1:
-    st.subheader("🛠️ أدخل بيانات المكمن")
+with col_input:
+    st.subheader("📝 إدخال البيانات")
+    depth = st.number_input("📏 العمق (ft)", value=8000)
+    pressure = st.number_input("🏋️ الضغط (psi)", value=3500)
+    porosity = st.number_input("💧 المسامية (%)", value=25.0)
+    permeability = st.number_input("🏎️ النفاذية (mD)", value=150)
     
-    # 1. العمق
-    depth = st.number_input("📏 العمق (ft)", value=8000, step=100)
-    
-    # 2. الضغط
-    pressure = st.number_input("🏋️ الضغط (psi)", value=3500, step=50)
-    
-    # 3. المسامية
-    porosity = st.number_input("💧 المسامية (%)", value=25.0, step=0.5, format="%.2f")
-    
-    # 4. النفاذية
-    permeability = st.number_input("🏎️ النفاذية (mD)", value=150, step=10)
-    
-    calculate = st.button("🔥 تحليل البرج التفاعلي")
+    if st.button("🚀 تشغيل البرج والتحليل"):
+        show_analysis = True
+    else:
+        show_analysis = False
 
-# --- 3. بناء البرج التفاعلي (يظهر بعد الضغط على الزر) ---
-with col2:
-    if calculate:
-        st.subheader("📊 المخطط النهائي التفاعلي: البرج النفطي")
+# 3. البرج التفاعلي (الاحترافي)
+with col_rig:
+    if show_analysis:
+        # حسابات ارتفاع الشعلات بناءً على القيم
+        h1 = min(pressure/60, 100)
+        h2 = min(porosity*3, 100)
+        h3 = min(permeability/2, 100)
+        h4 = 60 # العمق شعلة مستقرة
 
-        # --- حسابات بسيطة لتحديد حجم الشعلات (Logic) ---
-        # سنستخدم هذه النسب المئوية للتحكم في ارتفاع الشعلة في الـ CSS
-        
-        # 1. الضغط: كلما زاد، زادت الشعلة
-        pressure_flame_size = min(max(pressure / 50, 20), 100) # نسبة مئوية، حد أدنى وأقصى
-        
-        # 2. المسامية: كلما زادت، زادت الشعلة
-        porosity_flame_size = min(max(porosity * 3, 20), 100)
-        
-        # 3. النفاذية: كلما زادت، زادت الشعلة
-        permeability_flame_size = min(max(permeability / 2, 20), 100)
-        
-        # 4. العمق: سنعكسه، كلما زاد العمق زادت صعوبة الإنتاج (شعلة أصغر؟) أو نتركها للضغط.
-        # سنجعل العمق شعلة مستقرة للحرارة.
-        depth_flame_size = 50 
+        rig_design = f"""
+        <div style="background: rgba(0,0,0,0.6); border: 2px solid #ce93d8; border-radius: 20px; padding: 25px; text-align: center;">
+            <h2 style="color: #e1bee7;">المخطط النهائي: برج الإنتاج</h2>
+            <div style="display: flex; justify-content: space-around; align-items: flex-end; height: 350px; border-bottom: 4px solid #fff; margin: 20px 0;">
+                
+                <div style="text-align: center;">
+                    <div style="height: {h1}px; width: 40px; background: linear-gradient(#ff5252, #ffb74d); border-radius: 50% 50% 0 0; animation: pulse 1s infinite alternate;"></div>
+                    <p style="color: white; font-weight: bold;">الضغط</p>
+                </div>
 
-        # --- كود HTML و CSS للبرج والشعلات المتحركة ---
-        rig_html = f"""
-        <style>
-            /* حاوية البرج */
-            .rig-container {{
-                position: relative;
-                width: 300px;
-                height: 500px;
-                margin: 0 auto;
-                background-color: rgba(20, 20, 20, 0.8); /* خلفية باهتة */
-                border: 4px solid #444;
-                border-radius: 10px;
-                display: flex;
-                flex-direction: column-reverse; /* الطبقات تبدأ من الأسفل */
-                overflow: hidden;
-            }}
+                <div style="text-align: center;">
+                    <div style="height: {h2}px; width: 40px; background: linear-gradient(#42a5f5, #e3f2fd); border-radius: 50% 50% 0 0; animation: pulse 1.2s infinite alternate;"></div>
+                    <p style="color: white; font-weight: bold;">المسامية</p>
+                </div>
 
-            /* طبقات البرج */
-            .rig-level {{
-                flex: 1;
-                border-top: 2px solid #555;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                padding: 0 15px;
-                position: relative;
-            }}
+                <div style="text-align: center;">
+                    <div style="height: {h3}px; width: 40px; background: linear-gradient(#66bb6a, #c8e6c9); border-radius: 50% 50% 0 0; animation: pulse 0.8s infinite alternate;"></div>
+                    <p style="color: white; font-weight: bold;">النفاذية</p>
+                </div>
 
-            /* عناوين الطبقات */
-            .level-label {{
-                font-size: 14px;
-                font-weight: bold;
-                color: #DDD;
-                z-index: 10;
-            }}
-
-            /* القيم التفاعلية */
-            .level-value {{
-                font-size: 16px;
-                color: #FFD700; /* ذهبي */
-                z-index: 10;
-            }} /* تحريك شعلة النار (Animation) */
-            @keyframes flame-pulse {{
-                0% {{ transform: scaleY(1); opacity: 0.8; }}
-                50% {{ transform: scaleY(1.2); opacity: 1; }}
-                100% {{ transform: scaleY(1); opacity: 0.8; }}
-            }}
-
-            /* حاوية الشعلة */
-            .flame-container {{
-                position: absolute;
-                bottom: 0;
-                left: 50%;
-                transform: translateX(-50%);
-                width: 30px;
-                height: 100%; /* سيتم التحكم في الارتفاع الفعلي ديناميكياً */
-                display: flex;
-                align-items: flex-end;
-                z-index: 5;
-            }}
-
-            /* شعلة النار الأساسية */
-            .flame {{
-                width: 100%;
-                background: linear-gradient(to bottom, transparent, #FF4500, #FFD700); /* من البرتقالي للذهبي */
-                border-radius: 50% 50% 10% 10%;
-                animation: flame-pulse 1.5s ease-in-out infinite;
-                transform-origin: bottom;
-            }}
-
-        </style>
-
-        <div class="rig-container">
-            <div class="rig-level" style="background-color: rgba(0, 150, 136, 0.2);">
-                <div class="level-label">النفاذية</div>
-                <div class="flame-container" style="height: {permeability_flame_size}%;">
-                    <div class="flame" style="background: linear-gradient(to bottom, transparent, #4CAF50, #8BC34A);"></div> </div>
-                <div class="level-value">{permeability} mD</div>
+                <div style="text-align: center;">
+                    <div style="height: {h4}px; width: 40px; background: linear-gradient(#ab47bc, #f3e5f5); border-radius: 50% 50% 0 0; animation: pulse 1.5s infinite alternate;"></div>
+                    <p style="color: white; font-weight: bold;">العمق</p>
+                </div>
             </div>
 
-            <div class="rig-level" style="background-color: rgba(33, 150, 243, 0.2);">
-                <div class="level-label">المسامية</div>
-                <div class="flame-container" style="height: {porosity_flame_size}%;">
-                    <div class="flame" style="background: linear-gradient(to bottom, transparent, #2196F3, #BBDEFB);"></div> </div>
-                <div class="level-value">{porosity:.2f}%</div>
-            </div>
+            <style>
+                @keyframes pulse {{ from {{ transform: scaleY(1); opacity: 0.8; }} to {{ transform: scaleY(1.3); opacity: 1; }} }}
+            </style>
 
-            <div class="rig-level" style="background-color: rgba(244, 67, 54, 0.2);">
-                <div class="level-label">الضغط</div>
-                <div class="flame-container" style="height: {pressure_flame_size}%;">
-                    <div class="flame" style="background: linear-gradient(to bottom, transparent, #F44336, #FFCDD2);"></div> </div>
-                <div class="level-value">{pressure} psi</div>
-            </div>
-
-            <div class="rig-level" style="background-color: rgba(121, 85, 72, 0.2);">
-                <div class="level-label">العمق</div>
-                <div class="flame-container" style="height: {depth_flame_size}%;">
-                    <div class="flame" style="background: linear-gradient(to bottom, transparent, #795548, #D7CCC8);"></div> </div>
-                <div class="level-value">{depth} ft</div>
+            <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; color: white; text-align: right;">
+                <b>🔍 تحليل القيم:</b> بناءً على المدخلات، المكمن عند عمق {depth} قدم يمتلك خصائص تدفق جيدة جداً، 
+                والشعلات المرتفعة تشير إلى إمكانية إنتاج مستدامة بفضل الضغط ({pressure} psi).
             </div>
         </div>
         """
-
-        # عرض البرج التفاعلي في Streamlit
-        st.markdown(rig_html, unsafe_allow_html=True)
-
-        # --- 4. التوضيح الهندسي للقيم ---
-        st.divider()
-        st.subheader("📖 توضيح القيم وتأثيرها على الإنتاج")
-        
-        # شرح ديناميكي بناءً على القيم
-        cols = st.columns(2)
-        
-        with cols[0]:
-            st.info(f"📏 العمق ({depth} ft): يؤثر على درجة حرارة المكمن والضغط الطبقي. كلما زاد العمق، زادت تكاليف الحفر.")
-            if pressure > 4000:
-                st.error(f"🏋️ الضغط ({pressure} psi): ضغط عالي جداً! (الشعلة الحمراء مرتفعة). هذا مكمن واعد بقوة دفع قوية، لكنه يتطلب معدات آمنة.")
-            else:
-                st.warning(f"🏋️ الضغط ({pressure} psi): ضغط متوسط إلى منخفض. قد نحتاج لوسائل رفع صناعي (Artificial Lift) قريباً.")
-
-        with cols[1]:
-            if porosity > 20:
-                st.success(f"💧 المسامية ({porosity:.2f}%): مسامية ممتازة! (الشعلة الزرقاء مرتفعة). الصخور قادرة على تخزين كميات كبيرة من النفط.")
-[3/19/2026 10:35 AM] دعاء عيسى غتر(A), 35: else:
-                st.warning(f"💧 المسامية ({porosity:.2f}%): مسامية متوسطة. سعة التخزين محدودة.")
-            
-            if permeability > 100:
-                st.success(f"🏎️ النفاذية ({permeability} mD): نفاذية جيدة جداً! (الشعلة الخضراء مرتفعة). النفط سيتدفق بسهولة نحو البئر.")
-            else:
-                st.error(f"🏎️ النفاذية ({permeability} mD): نفاذية منخفضة. التدفق سيكون بطيئاً وقد نحتاج لعمليات تحفيز (Stimulation).")
+        st.markdown(rig_design, unsafe_allow_html=True)
