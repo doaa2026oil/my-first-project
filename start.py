@@ -1,77 +1,179 @@
 import streamlit as st
-import plotly.graph_objects as go
+from PIL import Image, ImageDraw, ImageFont
+import io
 
-# --- ملاحظة: كود الخلفية الخاص بكِ (add_bg_from_local) يجب أن يبقى في بداية ملفكِ ---
+# --- إعدادات الصفحة ---
+st.set_page_config(
+    page_title="تحليل المكامن بالذكاء الاصطناعي",
+    page_icon="🛢️",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-st.markdown("<h1 style='text-align: center; color: #FFD700;'>🔥 لوحة تحكم الشعلات وتحليل المكمن 🔥</h1>", unsafe_allow_html=True)
+# --- واجهة المستخدم (CSS لتصميم البطاقات) ---
+st.markdown("""
+<style>
+    /* تنسيق الحاوية الرئيسية للبطاقات */
+    .metric-container {
+        display: flex;
+        justify-content: space-around;
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+    /* تنسيق كل بطاقة فردية */
+    .metric-card {
+        background-color: #f9f9f9;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        width: 23%;
+        text-align: right;
+    }
+    .metric-title {
+        font-size: 1.1em;
+        color: #333;
+        margin-bottom: 10px;
+        font-weight: bold;
+    }
+    /* تنسيق مدخلات Streamlit داخل البطاقة */
+    div[data-baseweb="input"] {
+        border-radius: 8px !important;
+    }
+    /* تنسيق عنوان التطبيق */
+    .app-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .app-title {
+        color: #FFC107; /* لون أصفر ذهبي للشعلة */
+        font-size: 2.5em;
+        font-weight: bold;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# ==========================================
-# 1. البطاقات الملونة (المدخلات)
-# ==========================================
-col1, col2, col3, col4 = st.columns(4)
+# --- عنوان التطبيق ---
+st.markdown("""
+<div class="app-header">
+    <span class="app-title">🔥 لوحة تحكم الشعلات وتحليل المكمن 🔥</span>
+</div>
+""", unsafe_allow_html=True)
 
-with col1:
-    st.markdown("<div style='background-color: rgba(233, 30, 99, 0.2); padding: 15px; border-radius: 10px; border: 2px solid #e91e63;'>", unsafe_allow_html=True)
-    porosity = st.number_input("💧 المسامية (%)", value=25.0)
-    st.markdown("</div>", unsafe_allow_html=True)
+# --- قسم البطاقات الأربعة للإدخال ---
+st.markdown('<div class="metric-container">', unsafe_allow_html=True)
 
+# البطاقة 1: العمق (جديدة)
+with st.container():
+    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+    st.markdown('<div class="metric-title">📏 العمق (ft)</div>', unsafe_allow_html=True)
+    depth = st.number_input("", value=8000, step=100, key="depth_input", label_visibility="collapsed")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# البطاقة 2: الضغط
+with st.container():
+    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+    st.markdown('<div class="metric-title">🏋️‍♂️ الضغط (psi)</div>', unsafe_allow_html=True)
+    pressure = st.number_input("", value=3500, step=100, key="pressure_input", label_visibility="collapsed")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# البطاقة 3: المسامية
+with st.container():
+    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+    st.markdown('<div class="metric-title">💧 المسامية (%)</div>', unsafe_allow_html=True)
+    porosity = st.number_input("", value=25.0, step=0.1, key="porosity_input", label_visibility="collapsed")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# البطاقة 4: النفاذية
+with st.container():
+    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+    st.markdown('<div class="metric-title">🏎️ النفاذية (mD)</div>', unsafe_allow_html=True)
+    permeability = st.number_input("", value=150, step=10, key="perm_input", label_visibility="collapsed")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True) # إغلاق حاوية البطاقات
+
+# --- زر التشغيل ---
+col1, col2, col3 = st.columns([1,2,1])
 with col2:
-    st.markdown("<div style='background-color: rgba(3, 169, 244, 0.2); padding: 15px; border-radius: 10px; border: 2px solid #03a9f4;'>", unsafe_allow_html=True)
-    permeability = st.number_input("🏎️ النفاذية (mD)", value=150)
-    st.markdown("</div>", unsafe_allow_html=True)
+    run_analysis = st.button("🔥 تحليل المكمن وتحديث الشعلات 🔥", use_container_width=True)
 
-with col3:
-    st.markdown("<div style='background-color: rgba(76, 175, 80, 0.2); padding: 15px; border-radius: 10px; border: 2px solid #4caf50;'>", unsafe_allow_html=True)
-    pressure = st.number_input("🏋️ الضغط (psi)", value=3500)
-    st.markdown("</div>", unsafe_allow_html=True)
+# --- وظيفة لإنشاء الصورة ديناميكياً ---
+def create_flared_derrick_image(d, p, poro, perm):
+    # 1. إنشاء صورة خلفية (مستطيل يمثل السماء الليلية للحصول على تأثير أفضل للشعلات)
+    img_width = 800
+    img_height = 600
+    image = Image.new('RGB', (img_width, img_height), color = (10, 10, 30)) # سماء ليلية داكنة
+    draw = ImageDraw.Draw(image)
 
-with col4:
-    st.markdown("<div style='background-color: rgba(255, 152, 0, 0.2); padding: 15px; border-radius: 10px; border: 2px solid #ff9800;'>", unsafe_allow_html=True)
-    depth = st.number_input("🕳️ العمق (ft)", value=7500)
-    st.markdown("</div>", unsafe_allow_html=True)
+    # 2. رسم برج نفطي مبسط (Derrick)
+    derrick_color = (200, 200, 200) # لون معدني
+    derrick_base = [(300, 550), (500, 550), (450, 150), (350, 150)]
+    draw.polygon(derrick_base, outline=derrick_color, width=5)
+# رسم الهيكل الداخلي
+    for y in range(200, 550, 50):
+        draw.line([(350 + (y-150)//4, y), (450 - (y-150)//4, y)], fill=derrick_color, width=2)
+    draw.line([(350, 150), (450, 550)], fill=derrick_color, width=2)
+    draw.line([(450, 150), (350, 550)], fill=derrick_color, width=2)
 
-# ==========================================
-# 2. المخطط مع صورة البرج الفوتوغرافية
-# ==========================================
-fig = go.Figure()
+    # 3. محاكاة الشعلات الأربعة (Flakes)
+    # نستخدم دوائر متدرجة الألوان (أسفر، برتقالي، أحمر) لمحاكاة النار
+    flare_positions = [
+        (360, 140), # شعلة 1 (يسار علوي)
+        (440, 140), # شعلة 2 (يمين علوي)
+        (380, 100), # شعلة 3 (وسط أعلى)
+        (420, 100)  # شعلة 4 (وسط أعلى)
+    ]
+    
+    # رسم توهج الشعلات
+    for pos in flare_positions:
+        draw.ellipse([pos[0]-15, pos[1]-15, pos[0]+15, pos[1]+15], fill=(255, 69, 0), outline=None) # أحمر برتقالي
+        draw.ellipse([pos[0]-8, pos[1]-8, pos[0]+8, pos[1]+8], fill=(255, 165, 0), outline=None) # برتقالي
+        draw.ellipse([pos[0]-3, pos[1]-3, pos[0]+3, pos[1]+3], fill=(255, 255, 0), outline=None) # أصفر
 
-# رابط صورة برج فوتوغرافية (يمكنكِ استبداله برابط صورتكِ الخاصة)
-img_url = "https://images.unsplash.com/photo-1516198116309-885448657062?q=80&w=1000&auto=format&fit=crop"
+    # 4. إضافة النصوص (القيم) بجانب الشعلات
+    # ملاحظة: Pillow يحتاج خطوط نظام لإظهار العربية بشكل جيد، 
+    # سنستخدم الإنجليزية هنا للتبسيط ولضمان عمل الكود على أي جهاز مباشرة.
+    try:
+        # محاولة تحميل خط نظام شائع
+        font = ImageFont.truetype("arial.ttf", 18)
+    except IOError:
+        # خط احتياطي إذا لم يجد الخط المحدد
+        font = ImageFont.load_default()
 
-# إضافة الصورة كخلفية للمخطط فقط
-fig.add_layout_image(
-    dict(
-        source=img_url,
-        xref="x", yref="y",
-        x=0, y=1,
-        sizex=1, sizey=1,
-        sizing="stretch",
-        layer="below"
-    )
-)
+    text_color = (255, 255, 255)
+    
+    # ربط كل قيمة بشعلة
+    data_to_display = [
+        (f"Depth: {d} ft", (flare_positions[0][0]-140, flare_positions[0][1]-10)),
+        (f"Press: {p} psi", (flare_positions[1][0]+25, flare_positions[1][1]-10)),
+        (f"Poro: {poro} %", (flare_positions[2][0]-140, flare_positions[2][1]-20)),
+        (f"Perm: {perm} mD", (flare_positions[3][0]+25, flare_positions[3][1]-20))
+    ]
 
-# رسم الشعلات (الأعمدة) فوق صورة البرج
-flame_values = [porosity, permeability/50, pressure/100, depth/200] # تسوية القيم للرسم
-flame_colors = ['#e91e63', '#03a9f4', '#4caf50', '#ff9800']
-x_pos = [0.2, 0.4, 0.6, 0.8] # مواقع الشعلات فوق البرج
+    for text, pos in data_to_display:
+        draw.text(pos, text, fill=text_color, font=font)
 
-fig.add_trace(go.Bar(
-    x=x_pos,
-    y=flame_values,
-    marker_color=flame_colors,
-    width=0.08,
-    text=[f"{porosity}%", f"{permeability}", f"{pressure}", f"{depth}"],
-    textposition='outside',
-    textfont=dict(color='white', size=16)
-))
+    # إرجاع الصورة ككائن يمكن لـ Streamlit عرضه
+    img_byte_arr = io.BytesIO()
+    image.save(img_byte_arr, format='PNG')
+    return img_byte_arr.getvalue()
 
-fig.update_layout(
-    xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[0, 1]),
-    yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[0, 1.2]),
-    paper_bgcolor='rgba(0,0,0,0)', # خلفية المخطط شفافة لتظهر خلفية تطبيقكِ
-    plot_bgcolor='rgba(0,0,0,0)',
-    margin=dict(l=0, r=0, t=50, b=0),
-    height=600
-)
+# --- قسم العرض المرئي (النتيجة) ---
+if run_analysis:
+    st.markdown("---")
+    st.subheader("📊 تحليل الصورة المرئية للمكمن (بالذكاء الاصطناعي)")
+    
+    with st.spinner("جاري إنشاء الصورة وتحديث الشعلات..."):
+        # إنشاء الصورة بناءً على القيم الحالية
+        generated_image = create_flared_derrick_image(depth, pressure, porosity, permeability)
+        
+        # عرض الصورة
+        st.image(generated_image, caption="محاكاة برج النفط مع شعلات تعكس قيم المكمن المدخلة", use_container_width=True)
+        
+        # إضافة تلميح عن دور الذكاء الاصطناعي
+        st.info("💡 يقوم نموذج الذكاء الاصطناعي بتحليل هذه القيم (العمق، الضغط، المسامية، النفاذية) للتنبؤ بحجم الإنتاج وحالة المكمن بشكل لحظي.")
 
-st.plotly_chart(fig, use_container_width=True)
+else:
+    # رسالة تظهر قبل الضغط على الزر
+    st.markdown("---")
+    st.warning("👈 قم بتعديل القيم في البطاقات أعلاه ثم اضغط على 'تحليل المكمن' لعرض النتيجة المرئية.")
