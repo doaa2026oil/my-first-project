@@ -1,97 +1,101 @@
 import streamlit as st
+import matplotlib.pyplot as plt
+import numpy as np
+import base64
 
 st.set_page_config(layout="wide")
 
-# ===== خلفية مهندس =====
-st.markdown("""
+# ===== خلفية صورة مهندس =====
+def get_base64_of_bin_file(bin_file):
+    with open(bin_file, 'rb') as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+img_base64 = get_base64_of_bin_file("background.png")
+
+st.markdown(f"""
 <style>
-.stApp {
-    background-image: url("https://images.unsplash.com/photo-1581090700227-1e8b5d0b6f65");
+.stApp {{
+    background-image: url("data:image/png;base64,{img_base64}");
     background-size: cover;
     background-position: center;
-}
+    background-repeat: no-repeat;
+}}
 
-/* كارد رئيسي */
-.main {
-    background-color: rgba(0,0,0,0.75);
-    padding: 30px;
-    border-radius: 20px;
-    color: white;
-}
-
-/* البطاقات */
-.card {
-    background-color: rgba(20,20,20,0.9);
-    padding: 20px;
+.card {{
+    background: rgba(255,255,255,0.85);
+    padding: 15px;
     border-radius: 15px;
     text-align: center;
-    color: white;
-    box-shadow: 0 0 10px rgba(255,0,0,0.5);
-}
+    color: black;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}}
 
-/* البرج */
-.tower {
-    font-size: 80px;
-}
-.flame {
-    font-size: 40px;
-    color: orange;
-}
+.title {{
+    background: rgba(0,0,0,0.6);
+    color: white;
+    padding: 15px;
+    border-radius: 15px;
+    text-align: center;
+}}
 </style>
 """, unsafe_allow_html=True)
 
-# ===== العنوان =====
+# ===== عنوان =====
 st.markdown("""
-<div class="main">
-<h1>🏗️ منصة البرج الذكي لتحليل المكامن</h1>
-<p>تحليل الإنتاج باستخدام الذكاء الاصطناعي</p>
+<div class="title">
+<h1>🏗️ نظام تحليل المكامن النفطي باستخدام الذكاء الاصطناعي</h1>
 </div>
 """, unsafe_allow_html=True)
 
 st.write("")
 
-# ===== إدخال القيم داخل بطاقات =====
+# ===== بطاقات الإدخال =====
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.markdown("<div class='card'>المسامية</div>", unsafe_allow_html=True)
-    porosity = st.number_input(" ", value=25)
+    st.markdown("<div class='card'><h3>🟢 المسامية</h3></div>", unsafe_allow_html=True)
+    porosity = st.number_input("Porosity (%)", value=20.0)
 
 with col2:
-    st.markdown("<div class='card'>النفاذية</div>", unsafe_allow_html=True)
-    permeability = st.number_input("  ", value=150)
+    st.markdown("<div class='card'><h3>🔵 النفاذية</h3></div>", unsafe_allow_html=True)
+    permeability = st.number_input("Permeability (mD)", value=150.0)
 
 with col3:
-    st.markdown("<div class='card'>العمق</div>", unsafe_allow_html=True)
-    depth = st.number_input("   ", value=8000)
+    st.markdown("<div class='card'><h3>🟠 العمق</h3></div>", unsafe_allow_html=True)
+    depth = st.number_input("Depth (m)", value=3000.0)
 
 with col4:
-    st.markdown("<div class='card'>الضغط</div>", unsafe_allow_html=True)
-    pressure = st.number_input("    ", value=3500)
+    st.markdown("<div class='card'><h3>🔴 الضغط</h3></div>", unsafe_allow_html=True)
+    pressure = st.number_input("Pressure (psi)", value=2500.0)
 
-# ===== حساب الإنتاج =====
-production = (porosity * 2) + (permeability / 10) + (pressure / 100) - (depth / 1000)
+st.write("")
 
-# ===== عرض الإنتاج =====
-st.markdown(f"""
-<div class="main">
-<h2>📊 الإنتاج المتوقع</h2>
-<h1>{production:.2f}</h1>
-</div>
-""", unsafe_allow_html=True)
+# ===== زر الحساب =====
+if st.button("🔊 حساب الإنتاج المتوقع"):
 
-# ===== مخطط البرج (تمثيل بصري) =====
-st.markdown("<div class='main'>", unsafe_allow_html=True)
+    # ===== معادلة بسيطة للإنتاج (مثال) =====
+    production = (porosity * permeability) / (depth * 0.1) * (pressure / 1000)
 
-st.markdown("<div class='tower'>🏗️</div>", unsafe_allow_html=True)
+    st.success(f"📈 الإنتاج المتوقع: {production:.2f}")
 
-# عدد الشعلات حسب الإنتاج
-flares = int(min(4, max(1, production / 30)))
+    # ===== صوت (اختياري بسيط) =====
+    st.markdown("""
+    <audio autoplay>
+        <source src="https://www.soundjay.com/button/sounds/button-3.mp3" type="audio/mpeg">
+    </audio>
+    """, unsafe_allow_html=True)
 
-flame_display = "🔥" * flares
+    # ===== مخطط برج =====
+    heights = [porosity, permeability/10, depth/100, pressure/50]
+    labels = ["Porosity", "Permeability", "Depth", "Pressure"]
 
-st.markdown(f"<div class='flame'>{flame_display}</div>", unsafe_allow_html=True)
+    fig, ax = plt.subplots()
 
-st.markdown("<p>عدد الشعلات يمثل مستوى الإنتاج</p>", unsafe_allow_html=True)
+    x = np.arange(len(labels))
+    ax.bar(x, heights)
 
-st.markdown("</div>", unsafe_allow_html=True)
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+
+    st.pyplot(fig)
