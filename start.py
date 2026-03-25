@@ -1,11 +1,13 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import pydeck as pdk
 import base64
 
 st.set_page_config(layout="wide")
 
-# ===== خلفية صورة مهندس =====
+# ===== Background =====
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
@@ -19,16 +21,6 @@ st.markdown(f"""
     background-image: url("data:image/png;base64,{img_base64}");
     background-size: cover;
     background-position: center;
-    background-repeat: no-repeat;
-}}
-
-.card {{
-    background: rgba(255,255,255,0.85);
-    padding: 15px;
-    border-radius: 15px;
-    text-align: center;
-    color: black;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }}
 
 .title {{
@@ -38,64 +30,120 @@ st.markdown(f"""
     border-radius: 15px;
     text-align: center;
 }}
+
+.card {{
+    background: rgba(255,255,255,0.9);
+    padding: 15px;
+    border-radius: 15px;
+    text-align: center;
+    color: black;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}}
+
+.result {{
+    background: rgba(255,255,255,0.95);
+    color: black;
+    padding: 20px;
+    border-radius: 15px;
+    text-align: center;
+    font-size: 28px;
+    font-weight: bold;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}}
 </style>
 """, unsafe_allow_html=True)
 
-# ===== عنوان =====
+# ===== Title =====
 st.markdown("""
 <div class="title">
-<h1>🏗️ نظام تحليل المكامن النفطي باستخدام الذكاء الاصطناعي</h1>
+<h1>🏗️ Oil Field Intelligent Dashboard</h1>
 </div>
 """, unsafe_allow_html=True)
 
-st.write("")
+# ===== Sidebar Controls =====
+st.sidebar.title("⚙️ Control Panel")
 
-# ===== بطاقات الإدخال =====
+porosity = st.sidebar.slider("Porosity (%)", 5.0, 35.0, 20.0)
+permeability = st.sidebar.slider("Permeability (mD)", 50.0, 500.0, 150.0)
+pressure = st.sidebar.slider("Pressure (psi)", 1000.0, 5000.0, 2500.0)
+temperature = st.sidebar.slider("Temperature (°C)", 50.0, 150.0, 90.0)
+depth = st.sidebar.slider("Depth (m)", 1000.0, 5000.0, 3000.0)
+
+fluid_type = "Oil"
+
+# ===== Production Calculation =====
+h = 50
+B = 1.2
+mu = max(0.5, 2 - (temperature / 100))
+re_rw = 100
+
+production = 0.00708 * (permeability * h * pressure) / (mu * B * np.log(re_rw))
+production = production * (porosity / 100)
+
+# ===== KPIs =====
+st.markdown("## 📊 Field KPIs")
+
 col1, col2, col3, col4 = st.columns(4)
 
-with col1:
-    st.markdown("<div class='card'><h3>🟢 المسامية</h3></div>", unsafe_allow_html=True)
-    porosity = st.number_input("Porosity (%)", value=20.0)
+col1.metric("Production", f"{production:.0f} bbl/day")
+col2.metric("Pressure", f"{pressure} psi")
+col3.metric("Temperature", f"{temperature} °C")
+col4.metric("Fluid", fluid_type)
 
-with col2:
-    st.markdown("<div class='card'><h3>🔵 النفاذية</h3></div>", unsafe_allow_html=True)
-    permeability = st.number_input("Permeability (mD)", value=150.0)
+# ===== Layout =====
+left, right = st.columns([2, 1])
 
-with col3:
-    st.markdown("<div class='card'><h3>🟠 العمق</h3></div>", unsafe_allow_html=True)
-    depth = st.number_input("Depth (m)", value=3000.0)
+# ===== Map Data =====
+data = pd.DataFrame({
+    'lat': [30.5, 30.6, 30.55, 30.52],
+    'lon': [47.8, 47.9, 47.85, 47.82],
+    'production': [1200, 900, 1500, 1100],
+    'pressure': [2500, 2300, 2700, 2400]
+})
 
-with col4:
-    st.markdown("<div class='card'><h3>🔴 الضغط</h3></div>", unsafe_allow_html=True)
-    pressure = st.number_input("Pressure (psi)", value=2500.0)
+layer = pdk.Layer(
+    "ScatterplotLayer",
+    data=data,
+    get_position='[lon, lat]',
+    get_radius='pressure * 2',
+    get_fill_color='[production / 5, 100, 150]',
+    pickable=True
+)
 
-st.write("")
+view_state = pdk.ViewState(
+    latitude=30.55,
+    longitude=47.85,
+    zoom=10
+)
 
-# ===== زر الحساب =====
-if st.button("🔊 حساب الإنتاج المتوقع"):
+# ===== Left: Map =====
+with left:
+    st.markdown("### 🗺️ Oil Field Map")
 
-    # ===== معادلة بسيطة للإنتاج (مثال) =====
-    production = (porosity * permeability) / (depth * 0.1) * (pressure / 1000)
+    st.pydeck_chart(pdk.Deck(
+        layers=[layer],
+        initial_view_state=view_state,
+        tooltip={"text": "Production: {production} bbl/day\nPressure: {pressure} psi"}
+    ))
 
-    st.success(f"📈 الإنتاج المتوقع: {production:.2f}")
-
-    # ===== صوت (اختياري بسيط) =====
-    st.markdown("""
-    <audio autoplay>
-        <source src="https://www.soundjay.com/button/sounds/button-3.mp3" type="audio/mpeg">
-    </audio>
-    """, unsafe_allow_html=True)
-
-    # ===== مخطط برج =====
-    heights = [porosity, permeability/10, depth/100, pressure/50]
-    labels = ["Porosity", "Permeability", "Depth", "Pressure"]
+# ===== Right: Charts =====
+with right:
+    st.markdown("### 📈 Production Analysis")
 
     fig, ax = plt.subplots()
-
-    x = np.arange(len(labels))
-    ax.bar(x, heights)
-
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels)
-
+    ax.bar(["Production"], [production])
     st.pyplot(fig)
+
+# ===== Result Display =====
+st.markdown(f"""
+<div class="result">
+Estimated Oil Production: {production:.2f} barrels/day
+</div>
+""", unsafe_allow_html=True)
+
+# ===== Sound =====
+st.markdown("""
+<audio autoplay>
+    <source src="https://www.soundjay.com/button/sounds/button-3.mp3" type="audio/mpeg">
+</audio>
+""", unsafe_allow_html=True)
